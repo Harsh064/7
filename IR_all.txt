@@ -1,0 +1,235 @@
+IR1:
+import nltk
+nltk.download('punkt')
+nltk.download("stopwords")
+from nltk.stem import WordNetLemmatizer
+nltk.download('wordnet')
+
+import io
+file1 =  open('new_file.txt', "r+")
+text =file1.read()
+
+print("Original Text:\n", text)
+
+tokens = nltk.word_tokenize(text)
+print('Tokens :',tokens)
+
+stop_words = nltk.corpus.stopwords.words("english")
+tokens = [token for token in tokens if token not in stop_words]
+
+print('Tokens after removing Stop words :\n', tokens)
+
+stemmer = nltk.stem.PorterStemmer()
+steemed_text = [stemmer.stem(token) for token in tokens]
+
+print('Final text after stemming :- ', " ".join(steemed_text))
+
+lemmatizer = WordNetLemmatizer()
+lemmatized_text = [lemmatizer.lemmatize(token) for token in tokens]
+
+print('Final text after lemmatization  :- ', " ".join(lemmatized_text))
+
+
+***********************************************************************************************
+
+IR2:
+document1 = "The quick brown fox jumped over the lazy dog ."
+document2 = "The lazy dog slept in the sun ."
+
+tokens1 = document1.lower().split()
+tokens2 = document2.lower().split()
+
+terms = list(set(tokens1 + tokens2))
+
+inverted_index = {}
+
+for term in terms:
+	documents = []
+	if term in tokens1:
+		documents.append("Document 1")
+	if term in tokens2:
+		documents.append("Document 2")
+	inverted_index[term] = documents
+
+key = input('Enter key to be searched: ').lower()
+
+if key in inverted_index:
+	print(key, "--->", inverted_index[key])
+
+****************************************************************************************************
+IR3:
+import numpy as np
+import csv
+import pandas as pd
+from pgmpy.models import BayesianNetwork
+from pgmpy.estimators import MaximumLikelihoodEstimator
+from pgmpy.inference import VariableElimination
+
+df = pd.read_csv('heart.csv')
+
+Model=BayesianNetwork([('age','trestbps'),('age','fbs'),('sex','trestbps'),
+                    ('exang','trestbps'),('trestbps','target'),('fbs','target'),
+                    ('target','restecg'), ('target','thalach'),('target','chol')])
+
+Model.fit(df, estimator=MaximumLikelihoodEstimator)
+
+print('\n Inferencing with Bayesian Network:')
+HeartDisease_infer = VariableElimination(Model)
+
+result = HeartDisease_infer.query(variables=['target'], evidence={'age': 70, 'sex': 1, 'trestbps': 140})
+print(result)
+
+print('\n  Probability of HeartDisease given Age=30')
+q = HeartDisease_infer.query(variables=['target'],evidence={'age':70})
+print(q)
+
+******************************************************************************************************
+IR4:
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from nltk import word_tokenize
+
+df = pd.read_csv('emails.csv')
+
+import string
+import nltk
+from nltk.corpus import stopwords
+nltk.download('stopwords')
+
+def process_text(text):
+    no_punc = [char for char in text if char not in string.punctuation]
+    no_punc = ''.join(no_punc)
+
+
+    return ' '.join([word for word in no_punc.split() if word.lower() not in stopwords.words('english')])
+
+import nltk
+nltk.download('stopwords')
+
+df['text']=df['text'].apply(process_text)
+
+from nltk.stem import PorterStemmer
+stemmer = PorterStemmer()
+
+def stemming (text):
+    return ''.join([stemmer.stem(word) for word in text])
+
+df['text']=df['text'].apply(stemming)
+
+from sklearn.feature_extraction.text import CountVectorizer
+vectorizer= CountVectorizer()
+message_bow = vectorizer.fit_transform(df['text'])
+
+from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(message_bow, df['spam'], test_size=0.20, random_state=25)
+
+from sklearn.naive_bayes import MultinomialNB
+nb= MultinomialNB()
+nb.fit(X_train,y_train)
+
+y_pred = nb.predict(X_test)
+
+from sklearn.metrics import accuracy_score
+accuracy_score(y_test, y_pred)
+
+from sklearn.naive_bayes import BernoulliNB
+
+nb2= BernoulliNB()
+nb2.fit(X_train,y_train)
+
+y_pred2 = nb2.predict(X_test)
+
+from sklearn.metrics import accuracy_score
+accuracy_score(y_test, y_pred2)
+
+*************************************************************************************************
+IR5:
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.decomposition import PCA
+from sklearn.cluster import AgglomerativeClustering
+from sklearn.preprocessing import StandardScaler, normalize
+from sklearn.metrics import silhouette_score
+import scipy.cluster.hierarchy as shc
+
+X = pd.read_csv('CC GENERAL.csv')
+
+X = X.drop('CUST_ID', axis = 1)
+
+X.fillna(method ='ffill', inplace = True)
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+X_normalized = normalize(X_scaled)
+X_normalized = pd.DataFrame(X_normalized)
+
+pca = PCA(n_components = 2)
+X_principal = pca.fit_transform(X_normalized)
+X_principal = pd.DataFrame(X_principal)
+
+X_principal.columns = ['P1', 'P2']
+
+Dendrogram = shc.dendrogram((shc.linkage(X_principal, method ='ward')))
+
+ac2 = AgglomerativeClustering(n_clusters = 2)
+
+plt.figure(figsize =(6, 6))
+plt.scatter(X_principal['P1'], X_principal['P2'],c = ac2.fit_predict(X_principal), cmap ='rainbow')
+plt.show()
+
+******************************************************************************************************
+IR6:
+import requests
+from bs4 import BeautifulSoup
+
+def find_rank(keyword, website, search_query):
+    rank, rank_list = 0, ""
+
+    #url = str(input())
+    url = "https://www.google.com/search?q="
+    
+    keyword = keyword.replace(" ", "+")
+
+    url = url + keyword + "&num=" + str(search_query)
+    print(url)
+
+    page = requests.get(url)
+
+    soup = BeautifulSoup(page.content, 'html.parser')
+
+    result_div = soup.find_all('div', attrs={'class': 'Gx5Zad fP1Qef xpd EtOod pkphOe'})
+    
+    print("***************************************************************************")
+    print(result_div)
+
+    for div in result_div:
+        try:
+            link = div.find("a", href=True)
+            #print("***************************************************************************")
+            print(link)
+            
+            rank+=1
+            if link['href'][7:7+len(website)] == website:
+                rank_list += str(rank)+","
+                # rank += 1
+        except:
+            pass
+    return (rank_list, "Website Missing")[rank_list == ""]
+
+
+
+keyword = "dsa"
+website = "https://www.geeksforgeeks.org/"
+search_query = 30
+rank = find_rank(keyword, website, search_query)
+
+if rank == "Website Missing":
+    print(rank)
+else:
+    print('')
+    print("Rank of Website :", rank[:-1])
