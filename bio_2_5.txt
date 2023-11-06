@@ -1,0 +1,123 @@
+bio1:
+import pandas as pd
+
+seq = pd.read_csv('sequence')
+
+dna_sequence=
+
+def find_motifs(dna_sequence, motif_length):
+  motifs = []
+  for i in range(len(dna_sequence) - motif_length + 1):
+    motif = dna_sequence[i:i + motif_length]
+    if motif not in motifs:
+      motifs.append(motif)
+  return motifs
+
+motifs = find_motifs(dna_sequence, 3)
+print("Motifs:")
+print(motifs)
+print(len(motifs))
+
+
+def calculate_gc_content(dna_sequence):
+  gc_count = 0
+  for nucleotide in dna_sequence:
+    if nucleotide == "G" or nucleotide == "C":
+      gc_count += 1
+  gc_content = (gc_count / len(dna_sequence)) * 100
+  return gc_content
+
+gc_content = calculate_gc_content(dna_sequence)
+print("GC content:", gc_content)
+
+def identify_coding_regions(dna_sequence):
+  coding_regions = []
+  for i in range(len(dna_sequence)):
+    if dna_sequence[i:i + 3] == "ATG":
+      start_index = i
+      for j in range(i + 3, len(dna_sequence) - 3):
+        if dna_sequence[j:j + 3] == "TAA" or dna_sequence[j:j + 3] == "TGA" or dna_sequence[j:j + 3] == "TAG":
+          end_index = j
+          coding_regions.append((start_index, end_index))
+          break
+  return coding_regions
+
+coding_regions = identify_coding_regions(dna_sequence)
+print("Coding regions:",coding_regions)
+
+*************************************************************************************************************************
+
+bio5:
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import GridSearchCV
+
+data = pd.read_csv('Genomics.csv')
+
+data.dropna(inplace=True)
+
+features = data[['area', 'area_type', 'specimens', 'percentage', 'specimens_7d_avg', 'percentage_7d_avg']]
+labels = data['variant_name']
+
+# Convert categorical features to numerical using Label Encoding
+encoder = LabelEncoder()
+features['area'] = encoder.fit_transform(features['area'])
+features['area_type'] = encoder.fit_transform(features['area_type'])
+
+X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.2, random_state=42)
+
+# Standardize features
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+
+param_grid = {
+    'n_estimators': [100, 200,300],
+    'max_depth': [None, 10, 20, 30],
+    'min_samples_split': [2, 5],
+    'min_samples_leaf': [1, 2, 4]
+}
+
+rf_classifier = RandomForestClassifier(random_state=42)
+from sklearn.model_selection import GridSearchCV
+grid_search = GridSearchCV(rf_classifier, param_grid, cv=5, n_jobs=-1)
+grid_search.fit(X_train_scaled, y_train)
+
+best_rf_model = grid_search.best_estimator_
+best_rf_predictions = best_rf_model.predict(X_test_scaled)
+
+best_rf_accuracy = accuracy_score(y_test, best_rf_predictions)
+print("Best Random Forest Classifier Accuracy:", best_rf_accuracy)
+
+from sklearn.metrics import accuracy_score, classification_report
+best_rf_classification_report = classification_report(y_test, best_rf_predictions)
+
+from sklearn.svm import SVC
+
+param_grid2 = {
+    'kernel': ['linear', 'poly', 'rbf', 'sigmoid'],
+    'gamma' : ['scale', 'auto'],
+}
+
+svc_classifier = SVC(random_state=42)
+
+grid_search = GridSearchCV(svc_classifier, param_grid2, cv=5, n_jobs=-1)
+
+grid_search.fit(X_train_scaled, y_train)
+
+best_svc_model = svc_classifier.fit(X_train_scaled, y_train)
+best_svc_predictions = best_svc_model.predict(X_test_scaled)
+best_svc_accuracy = accuracy_score(y_test, best_svc_predictions)
+print("Best Support Vector Classifier Accuracy:", best_svc_accuracy)
+
+best_svc_classification_report = classification_report(y_test, best_svc_predictions)
+print("Best Support Vector Classifier Classification Report:\n", best_svc_classification_report)
+
