@@ -1,0 +1,1076 @@
+# Assignment 7
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+! gdown --id 10-jmnn2VDXFj9UF-9iD-Pgu6wFF2Awzs
+
+! gdown 1kPXyR4fb_3rjHUYZMgiiXATzqpof0ASt
+
+#Loading data
+data = pd.read_csv(r'/content/sales_data_sample.csv', encoding=('ISO-8859-1'))
+json_data = pd.read_json('/content/sales_data_sample.json')
+
+data.head()
+
+json_data.head()
+
+data.info()
+
+data.isna().sum()
+
+#Removing all the columns not revelant for this analysis
+data.drop(['ORDERLINENUMBER','STATUS','PRODUCTCODE','PHONE','STATE',
+           'POSTALCODE', 'TERRITORY', 'CONTACTFIRSTNAME', 'CONTACTLASTNAME'], axis=1, inplace=True)
+
+data.drop(['ADDRESSLINE1', 'ADDRESSLINE2'], axis=1, inplace=True)
+
+data.dropna(axis=0, inplace=True)
+
+data.duplicated( keep='first').sum()
+
+data['ORDERDATE'] = pd.to_datetime(data['ORDERDATE'])
+data.head(10)
+
+monthly_sales = data.groupby(['YEAR_ID','MONTH_ID'])['SALES'].sum().reset_index()
+monthly_sales.head(16)
+
+sns.lineplot(x='MONTH_ID',y='SALES',data=data, hue='YEAR_ID',palette='dark',errorbar=None,)
+
+yearly_sales=pd.DataFrame(data.groupby(['YEAR_ID'])['SALES'].sum().reset_index())
+yearly_sales
+
+sns.barplot(data=yearly_sales, y='SALES', x='YEAR_ID')
+
+products = data.groupby(['PRODUCTLINE'])['SALES'].sum().reset_index()
+price = data.groupby(['PRODUCTLINE'])['MSRP'].max().reset_index()   # MSRP = Manufacturer’s Suggested Retail Price
+result=pd.merge(products,price)
+result
+
+top_customer = data.groupby(['CUSTOMERNAME']).sum().sort_values('SALES', ascending = False).head(5)
+top_customer = top_customer[['SALES']].round(3)
+top_customer.reset_index(inplace = True)
+top_customer.head()
+
+country = data.groupby(['COUNTRY'])['SALES'].sum().reset_index()
+country
+
+cities = data.groupby(['CITY'])['SALES'].sum().reset_index()
+cities
+
+
+
+
+
+# Assignment 8
+import requests
+
+! gdown 1GP7ZzRdxr-_oMugujXhtVtrk9_i8dweF
+! gdown 1R4t8Wq8ikJGBwl98VKrVZGzNvPGtCDoA
+! gdown 1LqjW8GjZyO2vWEXU-jNnl1Bda3FtS4Jf
+
+BASE_URL = "http://api.openweathermap.org/data/2.5/weather?"
+API_KEY = open('api_key', 'r').read()
+CITY = "London"
+
+url = BASE_URL + "&appid=" + API_KEY + "&q=" + CITY
+
+response = requests.get(url).json()
+
+print(response)
+
+"""3.Extract relevant weather attributes such as temperature, humidity, wind speed, and
+precipitation from the API response
+"""
+
+#code = 200 successful request responded
+if response['cod'] == 200:
+    # Extract relevant weather attributes
+    temperature = response['main']['temp']
+    humidity = response['main']['humidity']
+    wind_speed = response['wind']['speed']
+
+    # Check if 'rain' key is present (for precipitation)
+    if 'rain' in response:
+        precipitation = response['rain']['1h']
+    else:
+        precipitation = 0
+
+
+    print(f'Temperature: {temperature} Kelvin')
+    print(f'Humidity: {humidity}%')
+    print(f'Wind Speed: {wind_speed} m/s')
+    print(f'Precipitation (last 1 hour): {precipitation} mm')
+else:
+    print('Error:', response['message'])
+
+"""4.Clean and preprocess the retrieved data, handling missing values or inconsistent
+formats.
+"""
+
+def get_weather_data(city):
+    BASE_URL = "http://api.openweathermap.org/data/2.5/weather?"
+    API_KEY = open('api_key', 'r').read()
+
+    url = BASE_URL + "appid=" + API_KEY + "&q=" + city
+    response = requests.get(url).json()
+    return response
+
+def clean_and_preprocess(data):
+    cleaned_data = {}
+
+    if data['cod'] == 200:
+        # Extract and clean relevant weather attributes
+        cleaned_data['temperature'] = data['main'].get('temp', None)
+        cleaned_data['humidity'] = data['main'].get('humidity', None)
+        cleaned_data['wind_speed'] = data['wind'].get('speed', None)
+
+        # Check if 'rain' key is present (for precipitation)
+        if 'rain' in data:
+            cleaned_data['precipitation'] = data['rain'].get('1h', 0)
+        else:
+            cleaned_data['precipitation'] = 0
+    else:
+        print('Error:', data.get('message', 'Unknown error'))
+
+    return cleaned_data
+
+def main():
+    CITY = "London"
+
+    # Get raw weather data
+    raw_data = get_weather_data(CITY)
+
+    # Clean and preprocess the data
+    preprocessed_data = clean_and_preprocess(raw_data)
+
+    # Print preprocessed data
+    if preprocessed_data:
+        print('Preprocessed Weather Data:')
+        for attribute, value in preprocessed_data.items():
+            print(f'{attribute.capitalize()}: {value}')
+
+if __name__ == "__main__":
+    main()
+
+"""5.Perform data modeling to analyze weather patterns, such as calculating average
+temperature, maximum/minimum values, or trends over time.
+"""
+
+import requests
+from datetime import datetime
+
+def get_weather_data(city):
+    BASE_URL = "http://api.openweathermap.org/data/2.5/weather?"
+    API_KEY = open('api_key', 'r').read()
+
+    url = BASE_URL + "appid=" + API_KEY + "&q=" + city
+    response = requests.get(url).json()
+    return response
+
+def clean_and_preprocess(data):
+    cleaned_data = {}
+
+    if data['cod'] == 200:
+        # Extract and clean relevant weather attributes
+        cleaned_data['temperature'] = data['main'].get('temp', None)
+
+
+        # Check if 'rain' key is present (for precipitation)
+        if 'rain' in data:
+            cleaned_data['precipitation'] = data['rain'].get('1h', 0)  # Precipitation in the last 1 hour
+        else:
+            cleaned_data['precipitation'] = 0  # No recent precipitation
+    else:
+        print('Error:', data.get('message', 'Unknown error'))
+
+    return cleaned_data
+
+def analyze_weather_patterns(data_list):
+    total_temp = 0
+    max_temp = float('-inf')
+    min_temp = float('inf')
+
+
+    for data in data_list:
+        total_temp += data.get('temperature', 0)
+        max_temp = max(max_temp, data.get('temperature', float('-inf')))
+        min_temp = min(min_temp, data.get('temperature', float('inf')))
+
+
+    num_entries = len(data_list)
+    average_temp = total_temp / num_entries
+
+
+    return {
+        'average_temperature': average_temp,
+        'max_temperature': max_temp,
+        'min_temperature': min_temp,
+
+    }
+
+def main():
+    CITY = "London"
+    NUM_DAYS = 5  # Number of days to analyze
+
+    data_list = []
+    for _ in range(NUM_DAYS):
+        raw_data = get_weather_data(CITY)
+        preprocessed_data = clean_and_preprocess(raw_data)
+        if preprocessed_data:
+            data_list.append(preprocessed_data)
+
+    if data_list:
+        analysis_results = analyze_weather_patterns(data_list)
+        print('Weather Pattern Analysis:')
+        for attribute, value in analysis_results.items():
+            if 'temperature' in attribute:
+                unit = 'Kelvin'
+
+            else:
+                unit = '%'
+            print(f'{attribute.replace("_", " ").capitalize()}: {value} {unit}')
+
+if __name__ == "__main__":
+    main()
+
+"""6.Visualize the weather data using appropriate plots, such as line charts, bar plots, or
+scatter plots, to represent temperature changes, precipitation levels, or wind speed
+variations
+"""
+
+import requests
+import matplotlib.pyplot as plt
+
+def get_weather_data(city):
+    BASE_URL = "http://api.openweathermap.org/data/2.5/weather?"
+    API_KEY = open('api_key', 'r').read()
+
+    url = BASE_URL + "appid=" + API_KEY + "&q=" + city
+    response = requests.get(url).json()
+    return response
+
+def clean_and_preprocess(data):
+    cleaned_data = {}
+
+    if data['cod'] == 200:
+        # Extract and clean relevant weather attributes
+        cleaned_data['temperature'] = data['main'].get('temp', None)
+        cleaned_data['precipitation'] = data.get('rain', {}).get('1h', 0)
+        cleaned_data['wind_speed'] = data['wind'].get('speed', None)
+    else:
+        print('Error:', data.get('message', 'Unknown error'))
+
+    return cleaned_data
+
+def main():
+    CITY = "London"
+    NUM_HOURS = 24  # Number of hours to analyze
+
+    data_list = []
+    for _ in range(NUM_HOURS):
+        raw_data = get_weather_data(CITY)
+        preprocessed_data = clean_and_preprocess(raw_data)
+        if preprocessed_data:
+            data_list.append(preprocessed_data)
+
+    if data_list:
+        hours = [i+1 for i in range(NUM_HOURS)]
+        temperatures = [data.get('temperature', 0) for data in data_list]
+        precipitation = [data.get('precipitation', 0) for data in data_list]
+        wind_speed = [data.get('wind_speed', 0) for data in data_list]
+
+        # Plot temperature changes
+        plt.figure(figsize=(10, 6))
+        plt.plot(hours, temperatures, marker='o')
+        plt.title('Temperature Changes Over 24 Hours')
+        plt.xlabel('Hour')
+        plt.ylabel('Temperature (K)')
+        plt.grid(True)
+        plt.show()
+
+        # Plot precipitation levels
+        plt.figure(figsize=(10, 6))
+        plt.plot(hours, precipitation, marker='o', color='r')
+        plt.title('Precipitation Levels Over 24 Hours')
+        plt.xlabel('Hour')
+        plt.ylabel('Precipitation (mm)')
+        plt.grid(True)
+        plt.show()
+
+        # Plot wind speed variations
+        plt.figure(figsize=(10, 6))
+        plt.plot(hours, wind_speed, marker='o', color='g')
+        plt.title('Wind Speed Variations Over 24 Hours')
+        plt.xlabel('Hour')
+        plt.ylabel('Wind Speed (m/s)')
+        plt.grid(True)
+        plt.show()
+
+if __name__ == "__main__":
+    main()
+
+"""7.Apply data aggregation techniques to summarize weather statistics by specific time
+periods
+"""
+
+import requests
+
+def get_weather_data(city):
+    BASE_URL = "http://api.openweathermap.org/data/2.5/weather?"
+    API_KEY = open('api_key', 'r').read()
+
+    url = BASE_URL + "appid=" + API_KEY + "&q=" + city
+    response = requests.get(url).json()
+    return response
+
+def clean_and_preprocess(data):
+    cleaned_data = {}
+
+    if data['cod'] == 200:
+        cleaned_data['temperature'] = data['main'].get('temp', None)
+        cleaned_data['humidity'] = data['main'].get('humidity', None)
+        cleaned_data['wind_speed'] = data['wind'].get('speed', None)
+    else:
+        print('Error:', data.get('message', 'Unknown error'))
+
+    return cleaned_data
+
+def aggregate_weather_data(data_list):
+    aggregated_data = {
+        'temperature': [],
+        'humidity': [],
+        'wind_speed': []
+    }
+
+    for data in data_list:
+        aggregated_data['temperature'].append(data.get('temperature', 0))
+        aggregated_data['humidity'].append(data.get('humidity', 0))
+        aggregated_data['wind_speed'].append(data.get('wind_speed', 0))
+
+    return aggregated_data
+
+def main():
+    CITY = "Pune"
+    NUM_DAYS = 5  # Number of days to analyze
+    HOURS_PER_DAY = 24
+
+    data_list = []
+    for _ in range(NUM_DAYS * HOURS_PER_DAY):
+        raw_data = get_weather_data(CITY)
+        preprocessed_data = clean_and_preprocess(raw_data)
+        if preprocessed_data:
+            data_list.append(preprocessed_data)
+
+    if data_list:
+        # Aggregate weather data
+        aggregated_data = aggregate_weather_data(data_list)
+
+        # Calculate summary statistics
+        summary_statistics = {
+            'average_temperature': sum(aggregated_data['temperature']) / len(aggregated_data['temperature']),
+            'average_humidity': sum(aggregated_data['humidity']) / len(aggregated_data['humidity']),
+            'average_wind_speed': sum(aggregated_data['wind_speed']) / len(aggregated_data['wind_speed'])
+        }
+
+        # Print summary statistics
+        print('Summary Statistics:')
+        for attribute, value in summary_statistics.items():
+            if 'temperature' in attribute:
+                unit = 'Kelvin'
+            elif 'wind_speed' in attribute:
+                unit = 'm/s'
+            else:
+                unit = '%'
+            print(f'{attribute.replace("_", " ").capitalize()}: {value} {unit}')
+
+if __name__ == "__main__":
+    main()
+
+"""8. Incorporate geographical information, if available, to create maps or geospatial
+visualizations representing weather patterns across different locations
+"""
+
+import requests
+import folium
+from datetime import datetime
+
+def get_weather_data(city):
+    BASE_URL = "http://api.openweathermap.org/data/2.5/weather?"
+    API_KEY = open('api_key', 'r').read()
+
+    url = BASE_URL + "appid=" + API_KEY + "&q=" + city
+    response = requests.get(url).json()
+    return response
+
+def clean_and_preprocess(data):
+    cleaned_data = {}
+
+    if data['cod'] == 200:
+        # Extract and clean relevant weather attributes
+        cleaned_data['temperature'] = data['main'].get('temp', None)
+        cleaned_data['humidity'] = data['main'].get('humidity', None)
+        cleaned_data['wind_speed'] = data['wind'].get('speed', None)
+        cleaned_data['latitude'] = data['coord'].get('lat', None)
+        cleaned_data['longitude'] = data['coord'].get('lon', None)
+    else:
+        print('Error:', data.get('message', 'Unknown error'))
+
+    return cleaned_data
+
+def visualize_geospatial(data_list):
+    map_center = [data_list[0]['latitude'], data_list[0]['longitude']]
+    weather_map = folium.Map(location=map_center, zoom_start=4)
+
+    for data in data_list:
+        temperature = data.get('temperature', 0)
+        humidity = data.get('humidity', 0)
+        wind_speed = data.get('wind_speed', 0)
+        latitude = data.get('latitude', 0)
+        longitude = data.get('longitude', 0)
+
+        popup_html = f'Temperature: {temperature} K'"\n"
+        popup_html += f'Humidity: {humidity}%' "\n"
+        popup_html += f'Wind Speed: {wind_speed} m/s'"\n"
+
+        folium.Marker([latitude, longitude], popup=folium.Popup(popup_html, parse_html=True)).add_to(weather_map)
+
+    weather_map.save('weather_map1.html')
+    print('Geospatial visualization saved as "weather_map1.html"')
+
+def main():
+    CITIES = ["London", "New York", "Tokyo","Pune"]
+    NUM_HOURS = 4  # Number of hours to analyze
+
+    data_list = []
+    for city in CITIES:
+        for _ in range(NUM_HOURS):
+            raw_data = get_weather_data(city)
+            preprocessed_data = clean_and_preprocess(raw_data)
+            if preprocessed_data:
+                data_list.append(preprocessed_data)
+
+    if data_list:
+        # Visualize geospatial map
+        visualize_geospatial(data_list)
+
+if __name__ == "__main__":
+    main()
+
+"""9. Explore and visualize relationships between weather attributes, such as temperature
+and humidity, using correlation plots or heatmaps.
+"""
+
+import requests
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from datetime import datetime
+
+def get_weather_data(city):
+    BASE_URL = "http://api.openweathermap.org/data/2.5/weather?"
+    API_KEY = open('api_key', 'r').read()
+
+    url = BASE_URL + "appid=" + API_KEY + "&q=" + city
+    response = requests.get(url).json()
+    return response
+
+def clean_and_preprocess(data):
+    cleaned_data = {}
+
+    if data['cod'] == 200:
+        # Extract and clean relevant weather attributes
+        cleaned_data['temperature'] = data['main'].get('temp', None)
+        cleaned_data['humidity'] = data['main'].get('humidity', None)
+    else:
+        print('Error:', data.get('message', 'Unknown error'))
+
+    return cleaned_data
+
+def main():
+    CITY = "Pune"
+    NUM_DAYS = 5  # Number of days to analyze
+
+    data_list = []
+    for _ in range(NUM_DAYS):
+        raw_data = get_weather_data(CITY)
+        preprocessed_data = clean_and_preprocess(raw_data)
+        if preprocessed_data:
+            data_list.append(preprocessed_data)
+
+    if data_list:
+        # Prepare data for scatter plot
+        temperatures = [data.get('temperature', 0) for data in data_list]
+        humidity = [data.get('humidity', 0) for data in data_list]
+
+        # Create a scatter plot
+        plt.figure(figsize=(8, 6))
+        sns.scatterplot(x=temperatures, y=humidity, hue=[f"Day {i+1}" for i in range(NUM_DAYS)])
+        plt.title('Scatter Plot: Temperature vs Humidity')
+        plt.xlabel('Temperature (K)')
+        plt.ylabel('Humidity (%)')
+        plt.legend()
+
+        plt.show()
+
+if __name__ == "__main__":
+    main()
+
+
+
+
+
+# Assignment 9
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import LabelEncoder
+
+"""1. Import the "Telecom_Customer_Churn.csv" dataset."""
+
+! gdown 1_1wkfruVJZIo2cvgowHPkdFF-C6ENri9
+
+dataset_path = "tele_com.csv"
+df = pd.read_csv(dataset_path)
+
+"""2. Explore the dataset to understand its structure and content."""
+
+print(df.info())
+
+"""3. Handle missing values in the dataset, deciding on an appropriate strategy."""
+
+print("\nMissing Values:")
+print(df.isnull().sum())
+
+df['MultipleLines'] = df['MultipleLines'].fillna('Not known').str.lower()
+
+print(df)
+
+"""5. Check for inconsistent data, such as inconsistent formatting or spelling variations,
+and standardize it.
+"""
+
+df['InternetService'] = df['InternetService'].replace('Fiber optical', 'Fiber Optic')
+
+print(df)
+
+"""6. Convert columns to the correct data types as needed"""
+
+df['MonthlyCharges'] = df['MonthlyCharges'].astype(int)
+df['TotalCharges'] = df['TotalCharges'].astype(int)
+
+print(df.info())
+
+"""7. Identify and handle outliers in the data."""
+
+import numpy as np
+# Select numerical columns for Z-Score calculation
+numerical_cols = ['tenure', 'MonthlyCharges', 'TotalCharges']
+
+# Calculate Z-Scores for selected columns
+z_scores = np.abs((df[numerical_cols] - df[numerical_cols].mean()) / df[numerical_cols].std())
+
+# Define a threshold for outlier detection (e.g., Z-Score greater than 3)
+threshold = 3
+
+# Identify and print outliers
+outliers = z_scores > threshold
+print("Outliers in each column:")
+outliers
+
+"""9.Normalize or scale the data if necessary."""
+
+# Count outliers in each column
+outlier_counts = outliers.sum()
+print("\nNumber of outliers in each column:")
+outlier_counts
+
+numerical_features = ['tenure', 'MonthlyCharges', 'TotalCharges']
+scaler = StandardScaler()
+
+df[numerical_features] = scaler.fit_transform(df[numerical_features])
+
+df.head()
+
+"""8.Perform feature engineering, creating new features that may be relevant to
+predicting customer churn
+"""
+
+df['Contract_Renewal'] = df['Contract'].apply(lambda x: 'Yes' if x in ['One year', 'Two year'] else 'No')
+
+print(df['Contract_Renewal'])
+
+"""10. Split the dataset into training and testing sets for further analysis."""
+
+X = df.drop(columns=['Churn'])
+y = df['Churn']
+
+# Split the dataset into training and testing sets (e.g., 70% training, 30% testing)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+# Print the shapes of the training and testing sets to verify the split
+print("Training set shape - X:", X_train.shape, "y:", y_train.shape)
+print("Testing set shape - X:", X_test.shape, "y:", y_test.shape)
+
+
+
+
+
+# Assignment 10
+import pandas as pd
+
+"""1) Import the "RealEstate_Prices.csv" dataset. Clean column names by removing spaces,
+special characters, or renaming them for clarity.
+"""
+
+! gdown 1hfgwWU-Lem8EOygA8OI2X-95F6Ixt9Xa
+
+df = pd.read_csv("RealEstate_price.csv")
+
+print(df)
+
+df.columns = df.columns.str.strip()
+df.columns = df.columns.str.replace(" ", "_")
+
+"""2.Handle missing values in the dataset, deciding on an appropriate strategy"""
+
+print(df.isnull().sum())
+
+price_mean = df['Price'].mean()
+bedrooms_mode = df['Bedrooms'].mode()[0]
+
+# Impute missing values with the mode
+df['Price'].fillna(price_mean, inplace=True)
+df['Bedrooms'].fillna(bedrooms_mode, inplace=True)
+
+print(df.isnull().sum())
+
+"""4.Filter and subset the data based on specific criteria, such as a particular time period,
+property type, or location.
+"""
+
+#Filter
+filtered_df = df[df['Bedrooms'] <= 2]
+print(filtered_df)
+
+#Subset
+subset_df = df[["Price", "SqFt", "Offers"]]
+subset_df
+
+"""5. Handle categorical variables by encoding them appropriately (e.g., one-hot encoding or
+label encoding) for further analysis
+"""
+
+label_mapping = {"No": 0, "Yes": 1}
+df['Brick'] = df['Brick'].map(label_mapping)
+
+print(df['Brick'])
+
+"""6.Aggregate the data to calculate summary statistics or derived metrics such as average
+sale prices by neighborhood or property type.
+"""
+
+grouped_data = df.groupby(['Neighborhood'])['Price'].mean().reset_index()
+
+print(grouped_data)
+
+"""7.Identify and handle outliers or extreme values in the data that may affect the analysis
+or modeling process.
+"""
+
+print(df.info())
+
+df['Price'] = df['Price'].astype(int)
+
+print(df.info())
+
+from scipy import stats
+
+# Calculate the Z-scores for the 'fare_amount' column
+df['z_score'] = stats.zscore(df['Price'])
+
+# Define a threshold for identifying outliers (e.g., 3)
+threshold = 3
+
+# Create a boolean mask to identify outliers
+outliers_mask = (df['z_score'] > threshold) | (df['z_score'] < -threshold)
+
+# Extract the outliers
+outliers = df[outliers_mask]
+
+# Print the outliers
+print(outliers)
+
+df.loc[103, 'Price'] = df.loc[103, 'Price'] if df.loc[103, 'Price'] <= threshold else df['Price'].median()
+
+print("Result of the 'Price' column:")
+print(df['Price'])
+
+from scipy import stats
+
+# Calculate the Z-scores for the 'fare_amount' column
+df['z_score'] = stats.zscore(df['Price'])
+
+# Define a threshold for identifying outliers (e.g., 3)
+threshold = 3
+
+# Create a boolean mask to identify outliers
+outliers_mask = (df['z_score'] > threshold) | (df['z_score'] < -threshold)
+
+# Extract the outliers
+outliers = df[outliers_mask]
+
+# Print the outliers
+print(outliers)
+
+
+
+
+
+# Assignment 11
+import pandas as pd
+import matplotlib.pyplot as plt
+
+"""1. Import the "City_Air_Quality.csv" dataset."""
+
+! gdown 1oXL85n9ut9HmVOKwiLVvT1wyXlMKiRU6
+
+data = pd.read_csv("AirQuality.csv")
+
+"""2. Explore the dataset to understand its structure and content."""
+
+data.head()
+
+data.info()
+
+print(data.isnull().sum())
+
+data.dropna(inplace=True)
+cleaned_data = data.dropna()
+
+print(cleaned_data)
+
+print(cleaned_data.isnull().sum())
+
+"""4. Create line plots or time series plots to visualize the overall AQI trend over time."""
+
+import matplotlib.pyplot as plt
+
+# Convert the 'Date' column to a datetime format for proper time series plotting
+cleaned_data['Date'] = pd.to_datetime(cleaned_data['Date'])
+
+# Sort the DataFrame by the 'Date' column (optional but recommended for time series)
+cleaned_data.sort_values(by='Date', inplace=True)
+
+# Create the line plot
+plt.figure(figsize=(8,6))
+plt.plot(cleaned_data['Date'], cleaned_data['AQI'], label='AQI', color='blue', linewidth=2)
+plt.xlabel('Date')
+plt.ylabel('AQI')
+plt.title('AQI Trend Over Time (Cleaned Data)')
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+
+# Display the plot
+plt.show()
+
+"""5. Plot individual pollutant levels (e.g., PM2.5, PM10, CO) on separate line plots to
+visualize their trends over time.
+"""
+
+cleaned_data['Date'] = pd.to_datetime(cleaned_data['Date'])
+
+# Sort the DataFrame by the 'Date' column (optional but recommended for time series)
+cleaned_data.sort_values(by='Date', inplace=True)
+
+# Define the pollutants you want to plot
+pollutants = ['PM2.5', 'PM10', 'CO']
+
+# Create separate line plots for each pollutant
+plt.figure(figsize=(12, 8))
+
+for pollutant in pollutants:
+    plt.plot(cleaned_data['Date'], cleaned_data[pollutant], label=pollutant)
+
+plt.xlabel('Date')
+plt.ylabel('Concentration')
+plt.title('Pollutant Trends Over Time (Cleaned Data)')
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+
+# Display the plots
+plt.show()
+
+"""6. Use bar plots or stacked bar plots to compare the AQI values across different dates or
+time periods.
+"""
+
+cleaned_data['Date'] = pd.to_datetime(cleaned_data['Date'])
+
+# Group the data by 'Date' and calculate the mean AQI for each date
+aqi_by_date = cleaned_data.groupby('Date')['AQI'].mean().reset_index()
+
+# Create a bar plot to compare AQI values across dates
+plt.figure(figsize=(12, 6))
+plt.bar(aqi_by_date['Date'], aqi_by_date['AQI'], color='blue', alpha=0.7)
+plt.xlabel('Date')
+plt.ylabel('Average AQI')
+plt.title('Average AQI Across Dates')
+plt.xticks(rotation=45)
+plt.grid(axis='y')
+plt.tight_layout()
+plt.show()
+
+"""7.violin plots to analyze the distribution of AQI values for different
+pollutant categories.
+"""
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+pollutants = ['PM2.5', 'PM10', 'CO']
+
+
+# Create violin plots for the same analysis (if desired)
+plt.figure(figsize=(12, 6))
+sns.violinplot(data=cleaned_data, x='AQI', y='PM2.5', palette='Set2', color='red')
+plt.xlabel('AQI')
+plt.ylabel('PM2.5')
+plt.title('Violin Plot: Distribution of AQI for PM2.5')
+plt.tight_layout()
+plt.show()
+
+plt.figure(figsize=(12, 6))
+sns.violinplot(data=cleaned_data, x='AQI', y='PM10', palette='Set2', color='red')
+plt.xlabel('AQI')
+plt.ylabel('PM10')
+plt.title('Violin Plot: Distribution of AQI for PM10')
+plt.tight_layout()
+plt.show()
+
+plt.figure(figsize=(12, 6))
+sns.violinplot(data=cleaned_data, x='AQI', y='CO', palette='Set2', color='red')
+plt.xlabel('AQI')
+plt.ylabel('CO')
+plt.title('Violin Plot: Distribution of AQI for CO')
+plt.tight_layout()
+plt.show()
+
+"""8.bubble charts to explore the relationship between AQI values and
+pollutant levels.
+"""
+
+import matplotlib.pyplot as plt
+
+
+# Define variables for the bubble chart
+x = cleaned_data['PM2.5']
+y = cleaned_data['CO']
+bubble_size = cleaned_data['PM10']  # Represent 'PM10' using bubble size
+aqi_values = cleaned_data['AQI']
+
+# Create the bubble chart
+plt.figure(figsize=(12, 8))
+plt.scatter(x, y, s=bubble_size, c=aqi_values, cmap='coolwarm', alpha=0.7)
+plt.xlabel('PM2.5')
+plt.ylabel('CO')
+plt.title('Bubble Chart: AQI vs. PM2.5 and CO')
+plt.colorbar(label='AQI')  # Add colorbar to show AQI values
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+
+
+
+
+# Assignment 12
+import pandas as pd
+
+"""1.Import the "Retail_Sales_Data.csv" dataset."""
+
+! gdown 18UWEnamFlMoCc_Db9v_Ud7uZ_OTcgmt6
+
+df = pd.read_csv("Retail_Sales.csv")
+
+"""2. Explore the dataset to understand its structure and content."""
+
+print(df.info())
+
+print(df)
+
+"""4. Group the sales data by region and calculate the total sales amount for each region."""
+
+sales_by_region = df.groupby('Region')['Sales_Amount'].sum().reset_index()
+print(sales_by_region)
+
+"""5. Create bar plots or pie charts to visualize the sales distribution by region."""
+
+import matplotlib.pyplot as plt
+plt.figure(figsize=(8, 8))
+plt.pie(sales_by_region['Sales_Amount'], labels=sales_by_region['Region'], autopct='%1.1f%%', startangle=140)
+plt.title('Sales Distribution by Region')
+plt.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+plt.show()
+
+"""6. Identify the top-performing regions based on the highest sales amount"""
+
+top_performing_regions = sales_by_region.sort_values(by='Sales_Amount', ascending=False)
+
+# Print the top-performing regions
+print("Top-performing regions based on highest sales amount:")
+print(top_performing_regions)
+
+"""7. Group the sales data by region and product category to calculate the total sales
+amount for each combination
+"""
+
+sales_by_region_category = df.groupby(['Region', 'Product_category'])['Sales_Amount'].sum().reset_index()
+
+# Display the result
+print(sales_by_region_category)
+
+"""8. Create stacked bar plots or grouped bar plots to compare the sales amounts across
+different regions and product categories
+"""
+
+ax = sales_by_region_category.plot(kind='bar', stacked=True, figsize=(12, 6))
+plt.xlabel('Region')
+plt.ylabel('Total Sales')
+plt.title('Sales Comparison by Region and Product Category')
+plt.legend(title='Product Category', loc='upper right', bbox_to_anchor=(1.15, 1))
+
+# Display the plot
+plt.show()
+
+
+
+
+
+# Assignment 13
+import pandas as pd
+
+"""1. Import the "Stock_Prices.csv" dataset."""
+
+! gdown 1WI8ghN1HHIrGQIBEtoX9MMlq8XfcgyRN
+
+df = pd.read_csv("Stock_Prices.csv")
+
+"""2. Explore the dataset to understand its structure and content."""
+
+print(df)
+print(df.info())
+
+"""4. Plot line charts or time series plots to visualize the historical stock price trends over
+time.
+"""
+
+import matplotlib.pyplot as plt
+unique_stocks = df['Name'].unique()
+i=0
+for stock_name in unique_stocks:
+    stock_data = df[df['Name'] == stock_name]
+
+    plt.figure(figsize=(12, 6))
+    plt.plot(stock_data['Date'], stock_data['Open'], label='Open Price', linestyle='-', marker='o')
+    plt.plot(stock_data['Date'], stock_data['High'], label='High Price', linestyle='-', marker='o')
+    plt.plot(stock_data['Date'], stock_data['Low'], label='Low Price', linestyle='-', marker='o')
+    plt.plot(stock_data['Date'], stock_data['Close'], label='Close Price', linestyle='-', marker='o')
+
+    plt.xlabel('Date')
+    plt.ylabel('Stock Price')
+    plt.title(f'Historical Stock Price Trends for {stock_name}')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+    i+=1
+
+    if i > 4:
+      break
+
+"""5. Calculate and plot moving averages or rolling averages to identify the underlying
+trends and smooth out noise
+"""
+
+window_size_50 = 50
+window_size_200 = 200
+
+# Calculate moving averages
+df['50_MA'] = df['Close'].rolling(window=window_size_50).mean()
+df['200_MA'] = df['Close'].rolling(window=window_size_200).mean()
+
+# Plotting historical stock prices and moving averages
+plt.figure(figsize=(12, 6))
+plt.plot(df['Date'], df['Close'], label='Closing Price', alpha=0.5)
+plt.plot(df['Date'], df['50_MA'], label=f'{window_size_50}-day MA', linestyle='--')
+plt.plot(df['Date'], df['200_MA'], label=f'{window_size_200}-day MA', linestyle='--')
+
+plt.xlabel('Date')
+plt.ylabel('Stock Price')
+plt.title('Historical Stock Price Trends with Moving Averages')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+"""6. Perform seasonality analysis to identify periodic patterns in the stock prices, such as
+weekly, monthly, or yearly fluctuations.
+
+7. Analyze and plot the correlation between the stock prices and other variables, such as
+trading volume
+"""
+
+df
+
+import seaborn as sns
+correlation_matrix = df[['Close', 'Volume']].corr()
+
+# Plot a heatmap of the correlation matrix
+plt.figure(figsize=(8, 6))
+sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt='.2f')
+plt.title('Correlation Heatmap')
+plt.show()
+
+"""8. Use autoregressive integrated moving average (ARIMA) models or exponential
+smoothing models to forecast future stock prices.
+"""
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from statsmodels.tsa.arima.model import ARIMA
+from sklearn.metrics import mean_squared_error
+from math import sqrt
+
+target = df['Close']
+
+# Split data into training and testing (e.g., 80% train, 20% test)
+train_size = int(len(target) * 0.8)
+train, test = target[:train_size], target[train_size:]
+
+# Define ARIMA order parameters (p, d, q)
+p, d, q = 1, 1, 1  # Example values; adjust based on model performance
+
+# Fit the ARIMA model
+model = ARIMA(train, order=(p, d, q))
+model_fit = model.fit()
+
+# Make predictions
+predictions = model_fit.forecast(steps=len(test))
+
+# Calculate RMSE
+rmse = sqrt(mean_squared_error(test, predictions))
+print(f'Root Mean Squared Error (RMSE): {rmse}')
+
+# Plot actual vs. predicted
+plt.figure(figsize=(12, 6))
+plt.plot(test.index, test.values, label='Actual')
+plt.plot(test.index, predictions, label='Predicted', color='red')
+plt.xlabel('Date')
+plt.ylabel('Stock Price')
+plt.title('Actual vs. Predicted Stock Prices')
+plt.legend()
+plt.show()

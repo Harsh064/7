@@ -1,0 +1,658 @@
+# Assignment 1
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Load the iris dataset
+wine = pd.read_csv('/content/wine_dataset (1).csv')
+
+wine.columns
+
+wine.head()
+
+wine['style'].value_counts()
+
+# Split the data into features and labels
+X = wine.drop(['style'], axis=1)
+y = wine['style']
+
+X.head()
+
+y.head()
+
+from sklearn.decomposition import PCA
+pca = PCA(n_components=2)
+
+reduced_X=pd.DataFrame(data=pca.fit_transform(X),columns=['PCA1','PCA2'])
+reduced_X.head()
+
+color = pd.DataFrame()
+color = wine['style'].replace('white', 'grey')
+
+reduced_X.plot.scatter(x='PCA1', y="PCA2", c=color)
+
+
+
+
+# Assignment 2
+import numpy as np
+import pandas as pd
+import os
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import Ridge
+from sklearn.linear_model import Lasso
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import r2_score, accuracy_score
+from sklearn.preprocessing import StandardScaler
+from math import radians,cos,sin,asin,sqrt
+
+os.getcwd()
+
+data = pd.read_csv('uber.csv')
+
+data.head()
+
+data.columns
+
+data = data.drop('Unnamed: 0',axis=1)
+
+data.columns
+
+data.shape
+
+data.info()
+
+data.isnull().sum().sort_values(ascending=False)
+
+data = data.dropna()
+
+data.isnull().sum().sort_values(ascending=False)
+
+data.describe()
+
+data.corr()
+
+data.head()
+
+data = data.drop(['key','pickup_datetime'],axis =1)
+
+data.columns
+
+#Haversine formula
+def distance(lon1,lat1,lon2,lat2):
+    lon1 = np.radians(lon1)
+    lat1 = np.radians(lat1)
+    lon2 = np.radians(lon2)
+    lat2 = np.radians(lat2)
+
+    dlon = lon2 - lon1
+    dlat = lat2 -lat1
+
+    a = np.sin(dlat/2)**2+np.cos(lat1)*np.cos(lat2)*np.sin(dlon/2)**2
+    c = 2* np.arcsin(np.sqrt(a))
+    r = 6371
+
+    return(c*r)
+
+distance(2,3,4,5)
+
+data
+
+pickup_longitude = data['pickup_longitude']
+pickup_latitude = data['pickup_latitude']
+dropoff_longitude = data['dropoff_longitude']
+dropoff_latitude = data['dropoff_latitude']
+
+data['Distance'] = distance(pickup_longitude,pickup_latitude,dropoff_longitude,dropoff_latitude)
+
+data
+
+plt.figure(figsize=(10,5))
+sns.scatterplot(x='Distance',y='fare_amount',data=data)
+
+data.drop(data[data['Distance']>60].index, inplace=True)
+data.drop(data[data['Distance']==0].index, inplace = True)
+data.drop(data[data['fare_amount']==0].index, inplace = True)
+data.drop(data[data['fare_amount']<0].index,inplace = True)
+data.shape
+
+data.drop(data[(data['fare_amount']>100) & (data['Distance']<1)].index, inplace=True)
+data.drop(data[(data['fare_amount']<1) & (data['Distance']>100)].index, inplace=True)
+
+plt.figure(figsize=(10,5))
+sns.color_palette("Set2")
+sns.scatterplot(x='Distance',y='fare_amount',data=data)
+
+x=data[['Distance','passenger_count']]
+y=data['fare_amount']
+
+x_train,x_test,y_train,y_test = train_test_split(x,y,test_size=0.3)
+
+model_LinearRegression = LinearRegression()
+
+model_LinearRegression.fit(x_train,y_train)
+
+pred = model_LinearRegression.predict(x_test)
+
+r2_score(y_test,pred)
+
+model_Ridge = Ridge()
+
+model_Ridge.fit(x,y)
+
+pred_1 = model_Ridge.predict(x)
+
+r2_score(y,pred_1)
+
+model_Lasso = Lasso()
+
+model_Lasso.fit(x,y)
+
+pred_2 = model_Lasso.predict(x)
+
+r2_score(y,pred_2)
+
+data_ = ['Lasso','LinearRegression','Ridge']
+
+r2_score_ = [0.7822,0.7831,0.7921]
+
+sns.barplot(x=data_ , y=r2_score_)
+plt.xlabel('data')
+plt.ylabel('Accuracy')
+plt.title('Accuracy Comparison of Classification Algorithms')
+plt.show()
+
+
+
+
+# Assignment 3
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+data = pd.read_csv("digits_data (1).csv")
+
+data.shape
+
+data.info()
+
+data
+
+data.describe()
+
+data['label'].unique()
+
+sns.countplot(x = "label", data=data)
+
+data.iloc[8, 1:]
+
+y = data['label']
+X = data.drop(columns = 'label')
+
+X = X/255.0
+print("X:", X.shape)
+
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2,random_state = 10)
+
+from sklearn.svm import SVC
+
+model= SVC(kernel='linear')
+model.fit(X_train, y_train)
+
+y_pred = model.predict(X_test)
+
+from sklearn.metrics import accuracy_score
+accuracy_score(y_test, y_pred)
+
+y_test.reset_index()['label'].head(15)
+
+index = int(input("Enter the Index Location, you want to predict: "))
+print(f"Actual number at given index position: {y_test.reset_index()['label'][index]}")
+
+print(f"Predicted value : ", y_pred[index])
+print("\n Actual image")
+X_test = X_test * 255
+image = X_test.iloc[index, 0:]
+image = image.values.reshape(28,28)
+plt.imshow(image, cmap='gray')
+
+
+
+
+# Assignment 4
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+import warnings
+warnings.filterwarnings('ignore')
+
+data = pd.read_csv("IRIS.csv")
+
+data.head()
+
+data.info()
+
+data.isnull().sum()
+
+data['species'].value_counts()
+
+x = data.drop('species', axis=1)
+y = data['species']
+
+x.shape , y.shape
+
+from sklearn.cluster import KMeans
+wcss = []
+
+for i in range(1, 11):
+    kmeans = KMeans(n_clusters = i, init = 'k-means++', max_iter = 300, n_init = 10, random_state = 0)
+    kmeans.fit(x)
+    wcss.append(kmeans.inertia_)
+
+plt.plot(range(1,11),wcss, color='red', marker ="o")
+plt.axvline(x=3, ls='--')
+
+from sklearn.cluster import KMeans
+
+kms = KMeans(n_clusters=3, init='k-means++')
+kms.fit(x)
+
+clusters = x.copy()
+clusters['Cluster_Prediction'] = kms.fit_predict(x)
+clusters.head()
+
+clusters['Cluster_Prediction'].value_counts()
+
+fig, ax = plt.subplots(figsize=(12,7))
+plt.scatter(data['sepal_length'], data['sepal_width'], c=clusters['Cluster_Prediction'],  edgecolor='magenta')
+plt.scatter(x=kms.cluster_centers_[:, 0], y=kms.cluster_centers_[:, 1], c = 'blue', s=70, label = 'Centroids', edgecolor='black', linewidth=0.3)
+plt.legend(loc='upper right')
+plt.xlim(4,8)
+plt.ylim(1.8,4.5)
+ax.set_ylabel('Sepal Width (in cm)')
+ax.set_xlabel('Sepal Length (in cm)')
+plt.title('Clusters', fontsize = 20)
+plt.show()
+
+from sklearn.metrics import silhouette_score
+silhouette_score = silhouette_score(x, clusters['Cluster_Prediction'])
+print("Silhouette score:", silhouette_score)
+
+
+
+
+# Assignment 5
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+!gdown 1WKEKAFcYAdpQt4G-eLvYogWnio2r4fds
+
+df = pd.read_csv('car_evaluation (1).csv')
+
+df.head()
+
+col_names = ['buying', 'maint', 'doors', 'persons', 'lug_boot', 'safety', 'rank']
+
+df.columns = col_names
+
+df.head()
+
+df.info()
+
+df.isnull().sum()
+
+X = df.drop(['safety'], axis=1)
+y = df['safety']
+
+
+
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.25, random_state = 42)
+
+X_train.shape, X_test.shape
+
+X.columns
+
+! pip install category_encoders
+
+import category_encoders as ce
+
+encoder = ce.OrdinalEncoder(cols=['buying', 'maint', 'doors', 'persons', 'lug_boot', 'rank'])
+X_train = encoder.fit_transform(X_train)
+X_test = encoder.transform(X_test)
+
+y_train.value_counts()
+
+
+
+X_train.head()
+
+from sklearn.ensemble import RandomForestClassifier
+
+rfc = RandomForestClassifier()
+rfc.fit(X_train, y_train)
+
+rfc.predict([[3,1,1,1,1,3]])
+
+y_pred = rfc.predict(X_test)
+
+y_pred
+
+from sklearn.metrics import accuracy_score
+
+accuracy_score(y_test, y_pred)
+
+
+
+from sklearn.preprocessing import StandardScaler
+
+param_grid = {
+    'n_estimators': [100, 200],
+    'max_depth': [None, 10, 20, 30],
+    'min_samples_split': [2, 5],
+    'min_samples_leaf': [1, 2, 4]
+}
+
+rf_classifier = RandomForestClassifier(random_state=42)
+
+from sklearn.model_selection import GridSearchCV
+
+grid_search = GridSearchCV(rf_classifier, param_grid, cv=5, n_jobs=-1)
+
+grid_search.fit(X_train, y_train)
+
+best_rf_model = grid_search.best_estimator_
+
+# Predict using the best model
+best_rf_predictions = best_rf_model.predict(X_test)
+
+print("Best Hyperparameters:", grid_search.best_params_)
+
+best_rf_accuracy = accuracy_score(y_test, best_rf_predictions)
+print("Best Random Forest Classifier Accuracy:", best_rf_accuracy)
+
+from sklearn.metrics import accuracy_score, classification_report
+best_rf_classification_report = classification_report(y_test, best_rf_predictions)
+print("Best Random Forest Classifier Classification Report:\n", best_rf_classification_report)
+
+
+
+
+# Assignment 6
+import numpy as np
+import pickle
+
+BOARD_ROWS = 3
+BOARD_COLS = 3
+
+class State:
+    def __init__(self, p1, p2):
+        self.board = np.zeros((BOARD_ROWS, BOARD_COLS))
+        self.p1 = p1
+        self.p2 = p2
+        self.isEnd = False
+        self.boardHash = None
+        # init p1 plays first
+        self.playerSymbol = 1
+
+    def getHash(self):
+        self.boardHash = str(self.board.reshape(BOARD_COLS * BOARD_ROWS))
+        return self.boardHash
+
+    def winner(self):
+        for i in range(BOARD_ROWS):
+            if sum(self.board[i, :]) == 3:
+                self.isEnd = True
+                return 1
+            if sum(self.board[i, :]) == -3:
+                self.isEnd = True
+                return -1
+
+        for i in range(BOARD_COLS):
+            if sum(self.board[:, i]) == 3:
+                self.isEnd = True
+                return 1
+            if sum(self.board[:, i]) == -3:
+                self.isEnd = True
+                return -1
+
+        diag_sum1 = sum([self.board[i, i] for i in range(BOARD_COLS)])
+        diag_sum2 = sum([self.board[i, BOARD_COLS - i - 1] for i in range(BOARD_COLS)])
+        diag_sum = max(diag_sum1, diag_sum2)
+        if diag_sum == 3:
+            self.isEnd = True
+            return 1
+        if diag_sum == -3:
+            self.isEnd = True
+            return -1
+
+        if len(self.availablePositions()) == 0:
+            self.isEnd = True
+            return 0
+
+        self.isEnd = False
+        return None
+
+    def availablePositions(self):
+        positions = []
+        for i in range(BOARD_ROWS):
+            for j in range(BOARD_COLS):
+                if self.board[i, j] == 0:
+                    positions.append((i, j))
+        return positions
+
+    def updateState(self, position):
+        self.board[position] = self.playerSymbol
+        self.playerSymbol = -1 if self.playerSymbol == 1 else 1
+
+    def giveReward(self):
+        result = self.winner()
+        if result == 1:
+            self.p1.feedReward(1)
+            self.p2.feedReward(0)
+        elif result == -1:
+            self.p1.feedReward(0)
+            self.p2.feedReward(1)
+        else:
+            self.p1.feedReward(0.5)
+            self.p2.feedReward(0.5)
+
+    def reset(self):
+        self.board = np.zeros((BOARD_ROWS, BOARD_COLS))
+        self.boardHash = None
+        self.isEnd = False
+        self.playerSymbol = 1
+
+    def play(self, rounds=100):
+        for i in range(rounds):
+            if i % 1000 == 0:
+                print("Rounds {}".format(i))
+            while not self.isEnd:
+                positions = self.availablePositions()
+                p1_action = self.p1.chooseAction(positions, self.board, self.playerSymbol)
+                self.updateState(p1_action)
+                board_hash = self.getHash()
+                self.p1.addState(board_hash)
+
+                win = self.winner()
+                if win is not None:
+                    self.giveReward()
+                    self.p1.reset()
+                    self.p2.reset()
+                    self.reset()
+                    break
+
+                else:
+                    positions = self.availablePositions()
+                    p2_action = self.p2.chooseAction(positions, self.board, self.playerSymbol)
+                    self.updateState(p2_action)
+                    board_hash = self.getHash()
+                    self.p2.addState(board_hash)
+
+                    win = self.winner()
+                    if win is not None:
+                        self.giveReward()
+                        self.p1.reset()
+                        self.p2.reset()
+                        self.reset()
+                        break
+
+    def play2(self):
+        while not self.isEnd:
+            positions = self.availablePositions()
+            p1_action = self.p1.chooseAction(positions, self.board, self.playerSymbol)
+            self.updateState(p1_action)
+            self.showBoard()
+            win = self.winner()
+            if win is not None:
+                if win == 1:
+                    print(self.p1.name, "wins!")
+                else:
+                    print("It's a tie!")
+                self.reset()
+                break
+
+            positions = self.availablePositions()
+            p2_action = self.p2.chooseAction(positions, self.board, self.playerSymbol)
+
+            self.updateState(p2_action)
+            self.showBoard()
+            win = self.winner()
+            if win is not None:
+                if win == -1:
+                    print(self.p2.name, "wins!")
+                else:
+                    print("It's a tie!")
+                self.reset()
+                break
+
+    def showBoard(self):
+        for i in range(0, BOARD_ROWS):
+            print('-------------')
+            out = '| '
+            for j in range(0, BOARD_COLS):
+                if self.board[i, j] == 1:
+                    token = 'x'
+                if self.board[i, j] == -1:
+                    token = 'o'
+                if self.board[i, j] == 0:
+                    token = ' '
+                out += token + ' |'
+            print(out)
+        print('-------------')
+
+class Player:
+    def __init__(self, name, exp_rate=0.3):
+        self.name = name
+        self.states = []
+        self.lr = 0.2
+        self.exp_rate = exp_rate
+        self.decay_gamma = 0.9
+        self.states_values = {}
+
+    def getHash(self, board):
+        return str(board.reshape(BOARD_ROWS * BOARD_COLS))
+
+    def chooseAction(self, positions, current_board, symbol):
+        if np.random.uniform(0, 1) <= self.exp_rate:
+            idx = np.random.choice(len(positions))
+            action = positions[idx]
+        else:
+            value_max = -999
+            for p in positions:
+                next_board = current_board.copy()
+                next_board[p] = symbol
+                next_board_hash = self.getHash(next_board)
+                if self.states_values.get(next_board_hash) is None:
+                    value = 0
+                else:
+                    value = self.states_values.get(next_board_hash)
+                if value >= value_max:
+                    value_max = value
+                    action = p
+        return action
+
+    def addState(self, state):
+        self.states.append(state)
+
+    def feedReward(self, reward):
+        for state in reversed(self.states):
+            if self.states_values.get(state) is None:
+                self.states_values[state] = 0
+            self.states_values[state] += self.lr * (self.decay_gamma * reward - self.states_values[state])
+            reward = self.states_values[state]
+
+    def reset(self):
+        self.states = []
+
+    def savePolicy(self):
+        with open('policy_' + str(self.name), 'wb') as fw:
+            pickle.dump(self.states_values, fw)
+
+    def loadPolicy(self, file):
+        with open(file, 'rb') as fr:
+            self.states_values = pickle.load(fr)
+
+# Example usage:
+# Save policy to a file
+# p1.savePolicy()
+# Load policy from a file
+# p1.loadPolicy("policy_Player1")
+
+class HumanPlayer:
+    def __init__(self, name):
+        self.name = name
+
+    def chooseAction(self, positions, current_board, symbol):
+        while True:
+            try:
+                row = int(input("Enter the row (0, 1, 2): "))
+                col = int(input("Enter the column (0, 1, 2): "))
+                action = (row, col)
+
+                if action in positions:
+                    return action
+                else:
+                    print("Invalid move. Please try again.")
+            except ValueError:
+                print("Invalid input. Please enter row and column as integers.")
+
+    def addState(self, state):
+        pass
+
+    def feedReward(self, reward):
+        pass
+
+    def reset(self):
+        pass
+
+# Example usage:
+# human_player = HumanPlayer(name="Human")
+# Use this player to play the game by taking input from a human player.
+
+p1 = Player("p1")
+p2 = Player("p2")
+
+st = State(p1, p2)
+print("training...")
+st.play(60000)
+
+p1.savePolicy()
+p2.savePolicy()
+
+p1.loadPolicy("policy_p1")
+
+p1 = Player("computer", exp_rate=0)
+p1.loadPolicy("policy_p1")
+
+p2 = HumanPlayer("human")
+
+st = State(p1, p2)
+st.play2()
